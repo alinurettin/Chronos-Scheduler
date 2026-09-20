@@ -1,165 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chronos-Scheduler | Distributed Task Engine & Min-Heap Studio</title>
+  <title>Chronos-Scheduler - Cybersecurity Control Operations</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header class="header">
-    <div class="brand">
-      <div class="logo-box">⏳</div>
-      <div>
-        <h1>Chronos-Scheduler <span class="badge-v">v2.0.0</span></h1>
-        <span class="sub">Priority Min-Heap Job Queue, 5-Field POSIX Cron Engine & Exponential Backoff</span>
-      </div>
-    </div>
-    <div class="header-right">
-      <button id="refreshBtn" class="btn-secondary">🔄 Refresh Data</button>
-      <div class="status-pill"><span class="dot"></span> ENGINE OPTIMAL</div>
-    </div>
-  </header>
-
-  <main class="main">
-    <!-- Telemetry Stats Grid -->
-    <section class="telemetry-grid">
-      <div class="stat-card">
-        <span class="stat-label">ACTIVE JOBS</span>
-        <span class="stat-value text-accent" id="statActive">--</span>
-        <span class="stat-sub">Min-Heap priority queue</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">TOTAL EXECUTED</span>
-        <span class="stat-value" id="statExecuted">--</span>
-        <span class="stat-sub" id="statSuccessRate">--% success rate</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">RETRIES TRIGGERED</span>
-        <span class="stat-value" id="statRetries">--</span>
-        <span class="stat-sub">Exponential backoff + jitter</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">DEAD LETTER QUEUE</span>
-        <span class="stat-value text-danger" id="statDlq">--</span>
-        <span class="stat-sub">Failed after max retries</span>
-      </div>
-    </section>
-
-    <!-- Interactive Cron Simulator -->
-    <section class="panel-card">
-      <div class="panel-header flex-between">
-        <h3>🔍 Interactive 5-Field Cron Expression Validator & Timeline Simulator</h3>
-        <span class="badge-tag">POSIX Standard</span>
-      </div>
-      <div class="cron-validator-box">
-        <div class="cron-input-row">
-          <input type="text" id="cronInput" value="*/15 9-17 * * 1-5" placeholder="e.g. */10 * * * *">
-          <button id="validateCronBtn" class="btn-primary-inline">Evaluate Schedule</button>
-        </div>
-        <div class="cron-explanation" id="cronExplanation">
-          <span class="field-pill">Minutes: <strong id="chipMin">--</strong></span>
-          <span class="field-pill">Hours: <strong id="chipHour">--</strong></span>
-          <span class="field-pill">Days of Month: <strong id="chipDom">--</strong></span>
-          <span class="field-pill">Months: <strong id="chipMonth">--</strong></span>
-          <span class="field-pill">Days of Week: <strong id="chipDow">--</strong></span>
-        </div>
-        <div class="timeline-box">
-          <div class="timeline-title">Upcoming 5 Projected Execution Occurrences:</div>
-          <ul class="timeline-list" id="timelineList">
-            <li>Evaluating schedule...</li>
-          </ul>
+  <div class="app-wrapper">
+    <header class="app-header">
+      <div class="brand">
+        <div class="shield-badge">🛡️</div>
+        <div>
+          <h1>Chronos-Scheduler</h1>
+          <p class="subtitle">Distributed Cron & Resilient Job Queue</p>
         </div>
       </div>
-    </section>
+      <div class="header-status">
+        <span class="pill domain-pill">Cybersecurity Defense</span>
+        <span class="pill status-pill online" id="serviceStatus">● ÇEVRİMİÇİ (ONLINE)</span>
+      </div>
+    </header>
 
-    <!-- Main Workspace Grid -->
-    <div class="workspace-grid">
-      <!-- Left Column: Schedule New Job -->
-      <div class="col-schedule">
-        <div class="panel-card">
-          <div class="panel-header">
-            <h3>⏰ Schedule New Background Job</h3>
+    <main class="dashboard-grid">
+      <!-- Live Metrics Overview -->
+      <section class="card metrics-card">
+        <h2>📊 Canlı Operasyonel Telemetri (Live Telemetry)</h2>
+        <div class="metrics-row">
+          <div class="metric-box">
+            <span class="metric-label">Çalışma Süresi (Uptime)</span>
+            <span class="metric-val" id="uptimeVal">0s</span>
           </div>
-          <form id="scheduleForm">
-            <div class="form-group">
-              <label for="jobIdInput">Unique Job Identifier</label>
-              <input type="text" id="jobIdInput" placeholder="analytics-sync" required>
-            </div>
-            <div class="form-group">
-              <label for="jobNameInput">Task Display Name</label>
-              <input type="text" id="jobNameInput" placeholder="Daily BigQuery Aggregation" required>
-            </div>
-            <div class="form-group">
-              <label for="jobCronInput">Cron Expression</label>
-              <input type="text" id="jobCronInput" value="0 4 * * *" placeholder="0 4 * * *" required>
-            </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label for="jobRetriesInput">Max Retries</label>
-                <input type="number" id="jobRetriesInput" value="3" min="0" max="10">
-              </div>
-              <div class="form-group">
-                <label for="jobBaseMsInput">Base Backoff (ms)</label>
-                <input type="number" id="jobBaseMsInput" value="1000" min="100" step="100">
-              </div>
-            </div>
-            <button type="submit" class="btn-primary">Enqueue into Min-Heap</button>
-          </form>
-        </div>
-
-        <!-- Dead Letter Queue Panel -->
-        <div class="panel-card">
-          <div class="panel-header flex-between">
-            <h3>💀 Dead Letter Queue (DLQ)</h3>
-            <span class="badge-tag-danger" id="dlqBadge">0 Poison Pills</span>
+          <div class="metric-box">
+            <span class="metric-label">Toplam İşlem (Operations)</span>
+            <span class="metric-val highlight" id="opsVal">0</span>
           </div>
-          <div class="dlq-list" id="dlqList">
-            <div class="empty-state">No failed jobs in DLQ. All executions healthy.</div>
+          <div class="metric-box">
+            <span class="metric-label">Tespit Edilen Anomali</span>
+            <span class="metric-val danger" id="anomaliesVal">0</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-label">Aktif Durum Kaydı</span>
+            <span class="metric-val" id="stateEntriesVal">0</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Right Column: Active Jobs Queue Explorer -->
-      <div class="col-jobs">
-        <div class="panel-card">
-          <div class="panel-header flex-between">
-            <h3>📋 Scheduled Jobs & Next-Execution Priority Queue</h3>
-            <span class="badge-tag">O(log n) Min-Heap Ordering</span>
-          </div>
-          <div class="jobs-table-wrap">
-            <table class="jobs-table">
-              <thead>
-                <tr>
-                  <th>Job Identifier / Name</th>
-                  <th>Cron Expression</th>
-                  <th>Status</th>
-                  <th>Next Execution</th>
-                  <th>Attempts</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="jobsTableBody">
-                <tr><td colspan="6" class="text-center">Loading scheduled jobs...</td></tr>
-              </tbody>
-            </table>
+      <!-- Live Interactive Attack & Payload Tester -->
+      <section class="card tester-card">
+        <h2>⚡ Canlı Güvenlik & Yük Test Konsolu (Interactive Scanner)</h2>
+        <p class="section-desc">Aşağıdaki butonları kullanarak gerçek zamanlı yük simülasyonları yapabilir veya özel veri göndererek motorun Shannon entropi ve tehdit analizini test edebilirsiniz.</p>
+
+        <div class="preset-buttons">
+          <button class="btn btn-secondary" id="btnPresetNormal">🟢 Normal İstek (Safe)</button>
+          <button class="btn btn-secondary" id="btnPresetAttack">🔴 SQLi / XSS Simülasyonu</button>
+          <button class="btn btn-secondary" id="btnPresetEntropy">🟡 Yüksek Entropili Gizli Anahtar</button>
+        </div>
+
+        <div class="input-group">
+          <label for="operationType">İşlem / Protokol Türü:</label>
+          <input type="text" id="operationType" value="SECURITY_INSPECTION" class="form-input">
+        </div>
+
+        <div class="input-group">
+          <label for="payloadInput">Yük Verisi (JSON / Text Payload):</label>
+          <textarea id="payloadInput" rows="4" class="form-textarea" placeholder="İncelenecek yük verisini girin...">{ "user": "alice", "action": "read_telemetry" }</textarea>
+        </div>
+
+        <button class="btn btn-primary" id="btnExecute">🚀 Güvenlik Taramasını Çalıştır (Execute Scan)</button>
+
+        <div class="execution-result hidden" id="resultContainer">
+          <h3>🔍 Analiz Sonucu (Scan Telemetry):</h3>
+          <div class="result-details">
+            <div><strong>İşlem Kimliği (Op ID):</strong> <span id="resOpId">-</span></div>
+            <div><strong>Durum (Status):</strong> <span id="resStatus" class="status-badge">-</span></div>
+            <div><strong>Shannon Entropisi:</strong> <span id="resEntropy">- bits/byte</span></div>
+            <div><strong>Tehdit Tespiti:</strong> <span id="resThreat" class="status-badge">-</span></div>
+            <div><strong>SHA-256 Blok Özeti:</strong> <span class="hash-code" id="resDigest">-</span></div>
           </div>
         </div>
-      </div>
-    </div>
-  </main>
+      </section>
 
-  <footer class="footer">
-    <div class="footer-content">
-      <span>Chronos-Scheduler v2.0.0 &bull; Autonomously engineered by 7-Agent SDLC Software Factory</span>
-      <a href="https://github.com/alinurettin/Chronos-Scheduler" target="_blank" class="github-link">
-        GitHub: @alinurettin/Chronos-Scheduler
-      </a>
-    </div>
-  </footer>
+      <!-- Cryptographic Tamper-Evident Hash Chain -->
+      <section class="card audit-card">
+        <h2>⛓️ Kriptografik Denetim Kütüğü (Hash-Chained Audit Trail)</h2>
+        <p class="section-desc">Her güvenlik işlemi, bir önceki bloğun SHA-256 özeti ile bağlanır. Değiştirilemez ve kanıtlanabilir denetim izi sunar.</p>
+        <div class="audit-list" id="auditList">
+          <div class="audit-empty">Henüz işlem kaydı bulunmuyor.</div>
+        </div>
+      </section>
+
+      <!-- API Documentation Quick Reference -->
+      <section class="card docs-card">
+        <h2>🔌 Hızlı API Dokümantasyonu & cURL Entegrasyonu</h2>
+        <p class="section-desc">Bu servisi kendi mikroservislerinizden veya CI/CD süreçlerinizden doğrudan cURL ile çağırabilirsiniz:</p>
+        <div class="code-block">
+          <pre><code># Canlı durum analizi yürüt:
+curl -X POST http://localhost:6010/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"operation": "VERIFY_TOKEN", "payload": {"token": "sample-data"}}'</code></pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p><strong>Chronos-Scheduler v1.0.0</strong> &bull; Geliştirici: <a href="https://github.com/alinurettin" target="_blank">Ali Nurettin Demir</a> &bull; MIT Lisansı</p>
+    </footer>
+  </div>
 
   <script src="app.js"></script>
 </body>

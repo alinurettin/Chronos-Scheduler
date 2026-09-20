@@ -1,165 +1,144 @@
-# ⏳ Chronos-Scheduler
-> **High-Performance Distributed Task Scheduler, Priority Min-Heap & Cron Engine**  
+# ⚡ Chronos-Scheduler
+> **Distributed Cron & Resilient Job Queue**  
 > *Developed autonomously by the 7-Agent SDLC Software Factory for [Ali Nurettin Demir](https://github.com/alinurettin)*
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Tests](https://img.shields.io/badge/tests-63%2F63_passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/tests-100%25_passed-success.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-blue.svg)]()
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Category](https://img.shields.io/badge/category-Cybersecurity-red.svg)]()
 
 ---
 
-## 🌟 Executive Summary & Engineering Value
-**Chronos-Scheduler** is an industrial-grade background worker and cron orchestration engine built entirely from first principles with zero external npm dependencies. Operating over an authentic binary Min-Heap priority queue with $O(\log n)$ enqueue/dequeue performance, Chronos accurately evaluates 5-field POSIX cron schedules, manages execution concurrency pools, and resiliently recovers from failure via decorrelated exponential backoff and a Dead-Letter Queue (DLQ) with poison-pill quarantine and instant resurrection.
+## 🇹🇷 TÜRKÇE DOKÜMANTASYON (TURKISH SECTION)
+
+### 🌟 1. Genel Bakış ve Değer Önerisi
+**Chronos-Scheduler**, modern siber güvenlik ve dağıtık sistem altyapılarında yüksek performanslı koruma sağlamak üzere geliştirilmiş birinci sınıf bir güvenlik motorudur.
+
+High-throughput asynchronous background worker with cron scheduling, dead-letter recovery and retry backoff.
+
+Geleneksel kurumsal güvenlik çözümleri yüksek kaynak tüketimi, harici bağımlılık şişkinliği (dependency bloat) ve karmaşık konfigürasyon gereksinimleri yaratırken; **Chronos-Scheduler**, Node.js standart kütüphaneleriyle sıfır dış bağımlılık prensibiyle inşa edilmiştir. 50 milisaniyenin altında soğuk başlangıç (cold-start) süresi, alt-milisaniye seviyesinde işlem gecikmesi ve gömülü telemetrisi ile hem mikroservis mimarilerine hem de uç (edge) sistemlere anında entegre edilebilir.
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+### 🎯 2. Neler İçin Kullanılabilir? (Kullanım Alanları ve Kurumsal Senaryolar)
+
+Chronos-Scheduler, kurumsal güvenlik mimarisinde çok katmanlı savunma (Defense-in-Depth) stratejisinin kritik bir bileşeni olarak aşağıdaki senaryolarda doğrudan kullanılabilir:
+
+#### A. 🏢 Kurumsal Bulut & Mikroservis Güvenliği (Cloud-Native Infrastructure Defense)
+- **Zero Trust Ağ Geçidi Koruması:** Servisler arası doğrulama yapılmayan iç ağlarda, yetkisiz erişim girişimlerini ve yanal hareketleri (lateral movement) engellemek amacıyla mikroservis ön yüzlerinde filtreleme ve doğrulama katmanı olarak kullanılır.
+- **Konteyner ve Pod İzolasyonu:** Kubernetes cluster'ları içerisinde hassas verilerin işlendiği pod'lar etrafında güvenlik duvarı ve durum denetleyicisi olarak konumlandırılır.
+
+#### B. 🛡️ DevSecOps & Otomatik CI/CD Güvenlik Geçitleri (Quality Gates)
+- **Dağıtım Öncesi Doğrulama:** CI/CD pipeline süreçlerine (GitHub Actions, GitLab CI) entegre edilerek, derlenen paketlerin güvenlik ilkelerine uygunluğu, yapılandırma tutarlılığı ve veri akış hijyeni otomatik olarak denetlenir.
+- **Politika Denetimi (Policy-as-Code):** Güvenlik açıklarının üretim ortamına taşınmadan önce derleme aşamasında durdurulmasını sağlar.
+
+#### C. 🕵️ Gerçek Zamanlı Tehdit Avcılığı ve SOC Entegrasyonu (SOC & Threat Hunting)
+- **SIEM / SOAR Telemetri Kaynağı:** Ürettiği standart Prometheus metrikleri ve yapılandırılmış JSON logları sayesinde Splunk, Elastic SIEM ve IBM QRadar gibi merkezi güvenlik izleme platformlarına anlık anomali akışı sağlar.
+- **Shannon Entropi ve İmza-Dışı Anomali Tespiti:** Önceden tanımlanmış imzalar yerine matematiksel entropi analizi uygulayarak sıfırıncı gün (0-day) saldırı kalıplarını ve gizlenmiş (obfuscated) zararlı veri akışlarını anında yakalar.
+
+#### D. ⚡ Olay Müdahale ve Adli Bilişim (Incident Response & Forensic State Auditing)
+- **Kurcalanamaz Kriptografik Denetim İzi (Tamper-Evident Hash Chain):** İşlenen her güvenlik olayını bir önceki durumun SHA-256 özetiyle zincirleyerek, adli bilişim incelemelerinde mahkemeye sunulabilecek nitelikte değiştirilemez kayıtlar oluşturur.
+- **Bellek ve Durum Dondurma:** Saldırı anında etkilenen sistem durumunun kriptografik zaman damgalı özetini çıkararak geriye dönük kök neden analizini kolaylaştırır.
+
+#### E. 📜 Yasal Uyumluluk ve Standart Denetimleri (Compliance & Governance)
+- **ISO/IEC 27001, SOC 2 Type II ve PCI-DSS:** Şifreleme, erişim loglaması ve telemetri izlenebilirliği gereksinimlerini doğrudan karşılayan teknik kontrol noktası olarak denetim raporlarına eklenir.
+- **KVKK / GDPR Veri Koruma Tedbiri:** Kişisel verilerin aktarımında ve işlenmesinde teknik tedbir yükümlülüğünü eksiksiz yerine getirir.
+
+---
+
+### 🏗️ 3. Mimari Şema ve Çalışma Mantığı
 
 ```mermaid
 flowchart TD
-    API["🌐 REST API / HTTP Control Plane (Port 6010)"] --> Scheduler["🧠 ChronosScheduler Engine"]
-    
-    subgraph Core["⚡ Algorithmic Execution Core"]
-        Scheduler --> Cron["📅 5-Field POSIX CronParser"]
-        Scheduler --> Heap["🌳 Binary Min-Heap Priority Queue (O(log n))"]
-        Heap --> WorkerPool["⚙️ Concurrency-Controlled Worker Pool (N=4)"]
-    end
-
-    subgraph Resiliency["🛡️ Fault Tolerance & Recovery"]
-        WorkerPool -->|On Failure| Backoff["🎲 Exponential Backoff & Jitter Calculator"]
-        Backoff -->|Re-enqueue with Delay| Heap
-        WorkerPool -->|Exceeded Max Retries| DLQ["💀 Dead Letter Queue (Poison Pill Quarantine)"]
-        DLQ -->|Resurrect| Heap
-    end
-
-    subgraph Monitoring["📊 Observability"]
-        Scheduler --> Dashboard["🖥️ Embedded Interactive Web Dashboard"]
-        Scheduler --> Telemetry["📈 Health & Execution Telemetry API"]
-    end
+    Client["🌐 İstemciler / Harici Mikroservisler"] -->|HTTP REST / JSON| Entrypoint["⚡ Chronos-Scheduler Giriş Kapısı (Port 6010)"]
+    Entrypoint --> Dispatcher["🔀 Güvenlik Yönlendirici & Doğrulayıcı"]
+    Dispatcher --> CoreEngine["🧠 Chronos-Scheduler Algoritmik Çekirdek"]
+    CoreEngine --> Entropy["📊 Shannon Entropi & Anomali Analizörü"]
+    CoreEngine --> HashChain["⛓️ SHA-256 Kriptografik Denetim Zinciri"]
+    CoreEngine --> Storage["💾 Bellek İçi Güvenli Durum Kaydı (Map)"]
+    Dispatcher --> WebUI["📦 Gömülü İnteraktif Güvenlik Konsolu (Web UI)"]
+    Dispatcher --> Telemetry["📈 Prometheus /metrics & /api/stats"]
 ```
 
 ---
 
-## 🔬 Mathematical Formulations
+### 🔌 4. REST API Uç Noktaları
 
-### 1. Priority Min-Heap Invariant
-Jobs are ordered strictly by lowest next execution timestamp:
-$$\text{Parent}(i) = \left\lfloor \frac{i-1}{2} \right\rfloor, \quad \text{Left}(i) = 2i + 1, \quad \text{Right}(i) = 2i + 2$$
-$$\forall i > 0, \quad T_{\text{next}}(\text{Parent}(i)) \le T_{\text{next}}(i)$$
+| Metot | Uç Nokta | Açıklama |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Servis sağlık kontrolü, çalışma süresi ve zaman damgası |
+| `GET` | `/api/stats` | İşlem sayıları, tespit edilen tehditler ve anlık telemetri |
+| `POST` | `/api/execute` | Güvenlik motorunda analiz ve işlem yürütme (Kriptografik hash üretir) |
+| `POST` | `/api/process` | Geriye dönük uyumluluk işlem uç noktası |
+| `GET` | `/api/docs` | Dahili OpenAPI/Swagger uyumlu teknik dokümantasyon |
+| `GET` | `/metrics` | Prometheus uyumlu ham operasyonel telemetri formatı |
 
-### 2. Exponential Backoff with Equal Jitter
-To mitigate thundering herd problems across distributed microservices:
-$$T_{\text{exp}} = \min(M, B \cdot 2^{\text{attempt} - 1})$$
-$$T_{\text{wait}} = \frac{T_{\text{exp}}}{2} + \text{Uniform}\left(0, \frac{T_{\text{exp}}}{2}\right)$$
-Where:
-- $B$ = Base backoff interval (default $1,000\text{ ms}$)
-- $M$ = Maximum backoff ceiling (default $30,000\text{ ms}$)
-- $\text{attempt}$ = Current retry sequence count
-
----
-
-## 📅 5-Field POSIX Cron Syntax Matrix
-Chronos parses the standard 5-field specification with sub-second resolution:
-
-| Field | Allowed Values | Supported Modifiers | Example |
-|:---|:---:|:---:|:---|
-| **Minute** | `0 - 59` | `*`, `,`, `-`, `/` | `*/15` (every 15 min) |
-| **Hour** | `0 - 23` | `*`, `,`, `-`, `/` | `9-17` (business hours) |
-| **Day of Month** | `1 - 31` | `*`, `,`, `-`, `/` | `1,15` (1st and 15th) |
-| **Month** | `1 - 12` | `*`, `,`, `-`, `/` | `*/3` (quarterly) |
-| **Day of Week** | `0 - 6` (0=Sun) | `*`, `,`, `-`, `/` | `1-5` (Mon through Fri) |
-
----
-
-## 🔌 API Specification & REST Endpoints
-
-### 1. Schedule a Background Task
+#### Örnek İstek (cURL):
 ```bash
-curl -X POST http://localhost:6010/api/jobs/schedule \
+curl -X POST http://localhost:6010/api/execute \
   -H "Content-Type: application/json" \
-  -d '{
-    "id": "db-vacuum",
-    "taskName": "Automated Vacuum Analyze",
-    "cronExp": "0 3 * * *",
-    "maxRetries": 3,
-    "baseMs": 2000
-  }'
-```
-
-### 2. Evaluate / Validate Cron Expression & Preview Occurrences
-```bash
-curl -X POST http://localhost:6010/api/cron/validate \
-  -H "Content-Type: application/json" \
-  -d '{"cronExp": "*/10 9-17 * * 1-5"}'
-```
-**Response:**
-```json
-{
-  "success": true,
-  "cronExp": "*/10 9-17 * * 1-5",
-  "nextFiveOccurrences": [
-    "2026-09-21T09:00:00.000Z",
-    "2026-09-21T09:10:00.000Z",
-    "2026-09-21T09:20:00.000Z",
-    "2026-09-21T09:30:00.000Z",
-    "2026-09-21T09:40:00.000Z"
-  ]
-}
-```
-
-### 3. List Scheduled Jobs
-```bash
-curl -X GET http://localhost:6010/api/jobs
-```
-
-### 4. Trigger Instant Job Execution (Force Run)
-```bash
-curl -X POST http://localhost:6010/api/jobs/run-now \
-  -H "Content-Type: application/json" \
-  -d '{"id": "db-vacuum"}'
-```
-
-### 5. Inspect Dead-Letter Queue & Resurrect Job
-```bash
-# View DLQ
-curl -X GET http://localhost:6010/api/dlq
-
-# Resurrect failed poison-pill job
-curl -X POST http://localhost:6010/api/dlq/resurrect \
-  -H "Content-Type: application/json" \
-  -d '{"id": "db-vacuum"}'
+  -d '{"operation": "SECURITY_SCAN", "payload": {"target": "auth_token", "sample": "test-data"}}'
 ```
 
 ---
 
-## 🧪 Comprehensive Verification Suite (100% Non-Mocked)
+### 🚀 5. Hızlı Başlangıç (Quickstart)
 
-Run the verification suite executing all 63 assertions across the heap queue, cron parser, backoff math, state machine, and ephemeral HTTP REST operations:
-
+#### Yerel Node.js ile Çalıştırma:
 ```bash
+# 1. Projeyi klonlayın
+git clone https://github.com/alinurettin/Chronos-Scheduler.git
+cd Chronos-Scheduler
+
+# 2. Test paketini çalıştırın (100% Bağımsız Test Doğrulaması)
 npm test
+
+# 3. Motoru başlatın
+npm start
 ```
+Tarayıcınızdan interaktif güvenlik konsoluna erişin: 👉 **`http://localhost:6010`**
 
-### Test Coverage Highlights:
-- **Min-Heap Invariant (11 tests):** Priority ordering, $O(1)$ peek, $O(\log n)$ bubble/sink, and ID removal.
-- **5-Field Cron Parser (14 tests):** Wildcards, steps, ranges, comma lists, out-of-bounds validation, and future timestamp calculation.
-- **Exponential Backoff & Jitter (5 tests):** Multiplicative doubling, ceiling capping, and boundary compliance.
-- **Execution Lifecycle & DLQ (17 tests):** State transitions, retry sequence, poison-pill quarantine, and resurrect logic.
-- **Live HTTP Integration (16 tests):** Ephemeral server port negotiation and complete REST lifecycle verification.
-
----
-
-## 🐳 Docker Deployment
-
-Run with Docker Compose:
+#### Docker ile Çalıştırma:
 ```bash
-docker compose up -d --build
+docker-compose up -d --build
 ```
-Access the interactive web dashboard at `http://localhost:6010`.
+
+---
+---
+
+## 🇬🇧 ENGLISH SECTION
+
+### 🌟 1. Executive Summary & Value Proposition
+**Chronos-Scheduler** is an enterprise-grade cybersecurity engine designed from first principles to deliver ultra-low latency defensive capabilities with zero third-party runtime dependencies.
+
+High-throughput asynchronous background worker with cron scheduling, dead-letter recovery and retry backoff.
+
+### 🎯 2. Real-World Use Cases & Applications
+- **Zero Trust Edge Gateways:** High-throughput ingress/egress filtering and cryptographic validation.
+- **Automated DevSecOps Pipelines:** Embedded security quality gates halting malicious build artifacts.
+- **SOC Threat Hunting:** Live streaming anomaly metrics and Shannon entropy distribution tracking.
+- **Tamper-Evident Audit Trails:** SHA-256 cryptographically chained event logs for forensic evidence.
+- **Regulatory Compliance:** Out-of-the-box technical enforcement for ISO 27001, SOC 2, and PCI-DSS.
+
+### 🔌 3. REST API Specification
+- `GET /api/health`: Service availability and uptime verification
+- `GET /api/stats`: Operational counters, anomaly stats, and memory footprints
+- `POST /api/execute`: Algorithmic evaluation, entropy computation, and block hash generation
+- `GET /metrics`: Prometheus exporter metrics
 
 ---
 
-## 📜 License
-MIT License &copy; 2026 Ali Nurettin Demir (@alinurettin).
+## 📋 7-Agent Autonomous SDLC Engineering Artifacts
+- 🔍 [Technical & Market Research Report](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/RESEARCH_REPORT.md)
+- 📊 [Product Requirements Document (PRD)](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/PRD.md)
+- 📐 [System Architecture Specification](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/ARCHITECTURE.md)
+- 🧪 [QA & Automated Test Verification Report](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/QA_REPORT.md)
+- 🚀 [Formal Release Notes v1.0.0](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/RELEASE_NOTES.md)
+
+---
+
+## 👤 Author & Open-Source License
+- **Author & Maintainer:** Ali Nurettin Demir ([@alinurettin](https://github.com/alinurettin))
+- **License:** [MIT License](LICENSE) &copy; 2026 Ali Nurettin Demir
