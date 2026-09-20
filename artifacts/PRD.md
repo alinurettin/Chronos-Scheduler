@@ -1,4 +1,4 @@
-﻿# ğŸ“Š Product Requirements Document (PRD): Chronos-Scheduler
+﻿# 📊 Product Requirements Document (PRD): Chronos-Scheduler
 - **Project:** Chronos-Scheduler
 - **Author:** Expert Business Analyst
 - **Status:** APPROVED & COMPLETE
