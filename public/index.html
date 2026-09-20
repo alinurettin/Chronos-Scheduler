@@ -1,36 +1,166 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chronos-Scheduler | Operational Studio</title>
+  <title>Chronos-Scheduler | Distributed Task Engine & Min-Heap Studio</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <header class="header">
     <div class="brand">
-      <span class="logo">⚡</span>
+      <div class="logo-box">⏳</div>
       <div>
-        <h1>Chronos-Scheduler</h1>
-        <span class="sub">Distributed Cron & Resilient Job Queue</span>
+        <h1>Chronos-Scheduler <span class="badge-v">v2.0.0</span></h1>
+        <span class="sub">Priority Min-Heap Job Queue, 5-Field POSIX Cron Engine & Exponential Backoff</span>
       </div>
     </div>
-    <div class="status-badge">🟢 Operational Active</div>
+    <div class="header-right">
+      <button id="refreshBtn" class="btn-secondary">🔄 Refresh Data</button>
+      <div class="status-pill"><span class="dot"></span> ENGINE OPTIMAL</div>
+    </div>
   </header>
+
   <main class="main">
-    <div class="card">
-      <h2>Engine Overview</h2>
-      <p>High-throughput asynchronous background worker with cron scheduling, dead-letter recovery and retry backoff.</p>
-      <div class="metrics-row" id="metricsRow">
-        <div class="metric"><span class="lbl">STATUS</span><span class="val">HEALTHY</span></div>
-        <div class="metric"><span class="lbl">LATENCY</span><span class="val">1.2 ms</span></div>
-        <div class="metric"><span class="lbl">THROUGHPUT</span><span class="val">1,250 req/s</span></div>
+    <!-- Telemetry Stats Grid -->
+    <section class="telemetry-grid">
+      <div class="stat-card">
+        <span class="stat-label">ACTIVE JOBS</span>
+        <span class="stat-value text-accent" id="statActive">--</span>
+        <span class="stat-sub">Min-Heap priority queue</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">TOTAL EXECUTED</span>
+        <span class="stat-value" id="statExecuted">--</span>
+        <span class="stat-sub" id="statSuccessRate">--% success rate</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">RETRIES TRIGGERED</span>
+        <span class="stat-value" id="statRetries">--</span>
+        <span class="stat-sub">Exponential backoff + jitter</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">DEAD LETTER QUEUE</span>
+        <span class="stat-value text-danger" id="statDlq">--</span>
+        <span class="stat-sub">Failed after max retries</span>
+      </div>
+    </section>
+
+    <!-- Interactive Cron Simulator -->
+    <section class="panel-card">
+      <div class="panel-header flex-between">
+        <h3>🔍 Interactive 5-Field Cron Expression Validator & Timeline Simulator</h3>
+        <span class="badge-tag">POSIX Standard</span>
+      </div>
+      <div class="cron-validator-box">
+        <div class="cron-input-row">
+          <input type="text" id="cronInput" value="*/15 9-17 * * 1-5" placeholder="e.g. */10 * * * *">
+          <button id="validateCronBtn" class="btn-primary-inline">Evaluate Schedule</button>
+        </div>
+        <div class="cron-explanation" id="cronExplanation">
+          <span class="field-pill">Minutes: <strong id="chipMin">--</strong></span>
+          <span class="field-pill">Hours: <strong id="chipHour">--</strong></span>
+          <span class="field-pill">Days of Month: <strong id="chipDom">--</strong></span>
+          <span class="field-pill">Months: <strong id="chipMonth">--</strong></span>
+          <span class="field-pill">Days of Week: <strong id="chipDow">--</strong></span>
+        </div>
+        <div class="timeline-box">
+          <div class="timeline-title">Upcoming 5 Projected Execution Occurrences:</div>
+          <ul class="timeline-list" id="timelineList">
+            <li>Evaluating schedule...</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid -->
+    <div class="workspace-grid">
+      <!-- Left Column: Schedule New Job -->
+      <div class="col-schedule">
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3>⏰ Schedule New Background Job</h3>
+          </div>
+          <form id="scheduleForm">
+            <div class="form-group">
+              <label for="jobIdInput">Unique Job Identifier</label>
+              <input type="text" id="jobIdInput" placeholder="analytics-sync" required>
+            </div>
+            <div class="form-group">
+              <label for="jobNameInput">Task Display Name</label>
+              <input type="text" id="jobNameInput" placeholder="Daily BigQuery Aggregation" required>
+            </div>
+            <div class="form-group">
+              <label for="jobCronInput">Cron Expression</label>
+              <input type="text" id="jobCronInput" value="0 4 * * *" placeholder="0 4 * * *" required>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="jobRetriesInput">Max Retries</label>
+                <input type="number" id="jobRetriesInput" value="3" min="0" max="10">
+              </div>
+              <div class="form-group">
+                <label for="jobBaseMsInput">Base Backoff (ms)</label>
+                <input type="number" id="jobBaseMsInput" value="1000" min="100" step="100">
+              </div>
+            </div>
+            <button type="submit" class="btn-primary">Enqueue into Min-Heap</button>
+          </form>
+        </div>
+
+        <!-- Dead Letter Queue Panel -->
+        <div class="panel-card">
+          <div class="panel-header flex-between">
+            <h3>💀 Dead Letter Queue (DLQ)</h3>
+            <span class="badge-tag-danger" id="dlqBadge">0 Poison Pills</span>
+          </div>
+          <div class="dlq-list" id="dlqList">
+            <div class="empty-state">No failed jobs in DLQ. All executions healthy.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Active Jobs Queue Explorer -->
+      <div class="col-jobs">
+        <div class="panel-card">
+          <div class="panel-header flex-between">
+            <h3>📋 Scheduled Jobs & Next-Execution Priority Queue</h3>
+            <span class="badge-tag">O(log n) Min-Heap Ordering</span>
+          </div>
+          <div class="jobs-table-wrap">
+            <table class="jobs-table">
+              <thead>
+                <tr>
+                  <th>Job Identifier / Name</th>
+                  <th>Cron Expression</th>
+                  <th>Status</th>
+                  <th>Next Execution</th>
+                  <th>Attempts</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="jobsTableBody">
+                <tr><td colspan="6" class="text-center">Loading scheduled jobs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </main>
+
   <footer class="footer">
-    <p>Chronos-Scheduler &bull; Autonomously engineered by 7-Agent SDLC Factory for <a href="https://github.com/alinurettin/Chronos-Scheduler" target="_blank">Ali Nurettin Demir</a></p>
+    <div class="footer-content">
+      <span>Chronos-Scheduler v2.0.0 &bull; Autonomously engineered by 7-Agent SDLC Software Factory</span>
+      <a href="https://github.com/alinurettin/Chronos-Scheduler" target="_blank" class="github-link">
+        GitHub: @alinurettin/Chronos-Scheduler
+      </a>
+    </div>
   </footer>
+
   <script src="app.js"></script>
 </body>
 </html>

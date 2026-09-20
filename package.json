@@ -1,6 +1,6 @@
-﻿{
+{
   "name": "chronos-scheduler",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "High-throughput asynchronous background worker with cron scheduling, dead-letter recovery and retry backoff.",
   "main": "src/index.js",
   "scripts": {

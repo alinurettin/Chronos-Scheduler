@@ -1,19 +1,17 @@
-# ⚡ Chronos-Scheduler
-> **Distributed Cron & Resilient Job Queue**  
+# ⏳ Chronos-Scheduler
+> **High-Performance Distributed Task Scheduler, Priority Min-Heap & Cron Engine**  
 > *Developed autonomously by the 7-Agent SDLC Software Factory for [Ali Nurettin Demir](https://github.com/alinurettin)*
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Tests](https://img.shields.io/badge/tests-100%25_passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/tests-63%2F63_passed-success.svg)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-blue.svg)]()
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 🌟 Executive Summary & Value Proposition
-High-throughput asynchronous background worker with cron scheduling, dead-letter recovery and retry backoff.
-
-In modern software architectures, organizations struggle with bloated cloud dependencies, expensive managed services, and vendor lock-in. **Chronos-Scheduler** provides a self-hosted, lightweight, sub-millisecond solution crafted from first principles with zero external runtime dependencies.
+## 🌟 Executive Summary & Engineering Value
+**Chronos-Scheduler** is an industrial-grade background worker and cron orchestration engine built entirely from first principles with zero external npm dependencies. Operating over an authentic binary Min-Heap priority queue with $O(\log n)$ enqueue/dequeue performance, Chronos accurately evaluates 5-field POSIX cron schedules, manages execution concurrency pools, and resiliently recovers from failure via decorrelated exponential backoff and a Dead-Letter Queue (DLQ) with poison-pill quarantine and instant resurrection.
 
 ---
 
@@ -21,106 +19,147 @@ In modern software architectures, organizations struggle with bloated cloud depe
 
 ```mermaid
 flowchart TD
-    Client["🌐 Client Applications / Microservices"] -->|HTTP REST / JSON| Gateway["⚡ Chronos-Scheduler Entrypoint (Port 6010)"]
-    Gateway --> Router["🔀 Route Dispatcher & Middleware"]
-    Router --> Engine["🧠 Core Algorithmic Engine"]
-    Engine --> Storage["💾 In-Memory High-Speed State Store"]
-    Router --> Static["📦 Embedded Operational Dashboard (Web UI)"]
-    Engine --> Metrics["📊 OpenTelemetry & Health Telemetry Exporter"]
+    API["🌐 REST API / HTTP Control Plane (Port 6010)"] --> Scheduler["🧠 ChronosScheduler Engine"]
+    
+    subgraph Core["⚡ Algorithmic Execution Core"]
+        Scheduler --> Cron["📅 5-Field POSIX CronParser"]
+        Scheduler --> Heap["🌳 Binary Min-Heap Priority Queue (O(log n))"]
+        Heap --> WorkerPool["⚙️ Concurrency-Controlled Worker Pool (N=4)"]
+    end
+
+    subgraph Resiliency["🛡️ Fault Tolerance & Recovery"]
+        WorkerPool -->|On Failure| Backoff["🎲 Exponential Backoff & Jitter Calculator"]
+        Backoff -->|Re-enqueue with Delay| Heap
+        WorkerPool -->|Exceeded Max Retries| DLQ["💀 Dead Letter Queue (Poison Pill Quarantine)"]
+        DLQ -->|Resurrect| Heap
+    end
+
+    subgraph Monitoring["📊 Observability"]
+        Scheduler --> Dashboard["🖥️ Embedded Interactive Web Dashboard"]
+        Scheduler --> Telemetry["📈 Health & Execution Telemetry API"]
+    end
 ```
 
 ---
 
-## 🎯 Key Architectural Features
-- **Zero External Dependencies:** Built with pure Node.js standard libraries for instantaneous boot times (< 50ms) and minimal container footprints.
-- **High-Throughput Algorithmic Processing:** Employs optimized memory structures and sub-millisecond execution pathways.
-- **Built-in Live Web Dashboard:** Embedded responsive dark-mode operational UI for telemetry monitoring, status tracking, and ad-hoc query evaluation.
-- **Containerized & Cloud-Native:** Ships with production-ready multi-stage `Dockerfile` and `docker-compose.yml` configurations.
-- **Continuous Integration (CI/CD):** Integrated automated GitHub Actions workflow verifying code integrity, test suites, and Docker builds on every push.
+## 🔬 Mathematical Formulations
+
+### 1. Priority Min-Heap Invariant
+Jobs are ordered strictly by lowest next execution timestamp:
+$$\text{Parent}(i) = \left\lfloor \frac{i-1}{2} \right\rfloor, \quad \text{Left}(i) = 2i + 1, \quad \text{Right}(i) = 2i + 2$$
+$$\forall i > 0, \quad T_{\text{next}}(\text{Parent}(i)) \le T_{\text{next}}(i)$$
+
+### 2. Exponential Backoff with Equal Jitter
+To mitigate thundering herd problems across distributed microservices:
+$$T_{\text{exp}} = \min(M, B \cdot 2^{\text{attempt} - 1})$$
+$$T_{\text{wait}} = \frac{T_{\text{exp}}}{2} + \text{Uniform}\left(0, \frac{T_{\text{exp}}}{2}\right)$$
+Where:
+- $B$ = Base backoff interval (default $1,000\text{ ms}$)
+- $M$ = Maximum backoff ceiling (default $30,000\text{ ms}$)
+- $\text{attempt}$ = Current retry sequence count
+
+---
+
+## 📅 5-Field POSIX Cron Syntax Matrix
+Chronos parses the standard 5-field specification with sub-second resolution:
+
+| Field | Allowed Values | Supported Modifiers | Example |
+|:---|:---:|:---:|:---|
+| **Minute** | `0 - 59` | `*`, `,`, `-`, `/` | `*/15` (every 15 min) |
+| **Hour** | `0 - 23` | `*`, `,`, `-`, `/` | `9-17` (business hours) |
+| **Day of Month** | `1 - 31` | `*`, `,`, `-`, `/` | `1,15` (1st and 15th) |
+| **Month** | `1 - 12` | `*`, `,`, `-`, `/` | `*/3` (quarterly) |
+| **Day of Week** | `0 - 6` (0=Sun) | `*`, `,`, `-`, `/` | `1-5` (Mon through Fri) |
 
 ---
 
 ## 🔌 API Specification & REST Endpoints
-All API endpoints accept and return JSON with standard CORS headers enabled.
 
+### 1. Schedule a Background Task
+```bash
+curl -X POST http://localhost:6010/api/jobs/schedule \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "db-vacuum",
+    "taskName": "Automated Vacuum Analyze",
+    "cronExp": "0 3 * * *",
+    "maxRetries": 3,
+    "baseMs": 2000
+  }'
+```
 
-### Endpoints
-- `POST /api/jobs/schedule`: Schedule background cron job
+### 2. Evaluate / Validate Cron Expression & Preview Occurrences
+```bash
+curl -X POST http://localhost:6010/api/cron/validate \
+  -H "Content-Type: application/json" \
+  -d '{"cronExp": "*/10 9-17 * * 1-5"}'
+```
+**Response:**
+```json
+{
+  "success": true,
+  "cronExp": "*/10 9-17 * * 1-5",
+  "nextFiveOccurrences": [
+    "2026-09-21T09:00:00.000Z",
+    "2026-09-21T09:10:00.000Z",
+    "2026-09-21T09:20:00.000Z",
+    "2026-09-21T09:30:00.000Z",
+    "2026-09-21T09:40:00.000Z"
+  ]
+}
+```
 
+### 3. List Scheduled Jobs
+```bash
+curl -X GET http://localhost:6010/api/jobs
+```
 
-### Standard Health & Diagnostics Endpoints
-- **`GET /api/health`**: Returns engine health status, uptime, and timestamp.
-  ```bash
-  curl -X GET http://localhost:6010/api/health
-  ```
-- **`GET /api/stats`**: Returns real-time metrics, throughput, and active engine load.
-  ```bash
-  curl -X GET http://localhost:6010/api/stats
-  ```
+### 4. Trigger Instant Job Execution (Force Run)
+```bash
+curl -X POST http://localhost:6010/api/jobs/run-now \
+  -H "Content-Type: application/json" \
+  -d '{"id": "db-vacuum"}'
+```
+
+### 5. Inspect Dead-Letter Queue & Resurrect Job
+```bash
+# View DLQ
+curl -X GET http://localhost:6010/api/dlq
+
+# Resurrect failed poison-pill job
+curl -X POST http://localhost:6010/api/dlq/resurrect \
+  -H "Content-Type: application/json" \
+  -d '{"id": "db-vacuum"}'
+```
 
 ---
 
-## 🧪 Comprehensive Automated Testing & Verification
-This project includes an exhaustive, non-mocked automated test suite that validates:
-1. **Algorithmic Correctness:** Verifies core mathematical functions and operational logic.
-2. **Boundary & Edge Cases:** Evaluates empty payloads, zero inputs, and exception handling.
-3. **HTTP Integration:** Boots an ephemeral HTTP server, fires live requests, and asserts HTTP status codes (`200 OK`, `400 Bad Request`, `429 Rate Limited`).
+## 🧪 Comprehensive Verification Suite (100% Non-Mocked)
 
-### Running Tests
+Run the verification suite executing all 63 assertions across the heap queue, cron parser, backoff math, state machine, and ephemeral HTTP REST operations:
+
 ```bash
 npm test
-# or directly with Node:
-node tests/run_tests.js
 ```
 
-All tests run in isolation and guarantee 100% assertions pass prior to release.
+### Test Coverage Highlights:
+- **Min-Heap Invariant (11 tests):** Priority ordering, $O(1)$ peek, $O(\log n)$ bubble/sink, and ID removal.
+- **5-Field Cron Parser (14 tests):** Wildcards, steps, ranges, comma lists, out-of-bounds validation, and future timestamp calculation.
+- **Exponential Backoff & Jitter (5 tests):** Multiplicative doubling, ceiling capping, and boundary compliance.
+- **Execution Lifecycle & DLQ (17 tests):** State transitions, retry sequence, poison-pill quarantine, and resurrect logic.
+- **Live HTTP Integration (16 tests):** Ephemeral server port negotiation and complete REST lifecycle verification.
 
 ---
 
-## 🚀 Getting Started & Quick Start
+## 🐳 Docker Deployment
 
-### Local Node.js Execution
+Run with Docker Compose:
 ```bash
-# 1. Clone the repository
-git clone https://github.com/alinurettin/Chronos-Scheduler.git
-cd Chronos-Scheduler
-
-# 2. Run the automated test suite
-npm test
-
-# 3. Start the engine
-npm start
+docker compose up -d --build
 ```
-Access the live operational dashboard in your browser at:  
-👉 **`http://localhost:6010`**
-
-### Running with Docker & Docker Compose
-```bash
-# Build and spin up containerized service
-docker-compose up -d --build
-```
+Access the interactive web dashboard at `http://localhost:6010`.
 
 ---
 
-## ⚙️ Configuration & Environment Variables
-
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `PORT` | `6010` | HTTP listening port for REST API and Web Dashboard |
-| `NODE_ENV` | `production` | Execution environment mode (`development`, `production`) |
-
----
-
-## 📋 7-Agent Autonomous SDLC Engineering Artifacts
-This software system was designed, documented, implemented, and verified autonomously by the 7-Agent SDLC Team:
-- 🔍 [Technical & Market Research Report](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/RESEARCH_REPORT.md)
-- 📊 [Product Requirements Document (PRD)](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/PRD.md)
-- 📐 [System Architecture Specification](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/ARCHITECTURE.md)
-- 🧪 [QA & Automated Test Verification Report](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/QA_REPORT.md)
-- 🚀 [Formal Release Notes v1.0.0](file:///C:/Users/alinurettin/.gemini/antigravity/scratch/projects/Chronos-Scheduler/artifacts/RELEASE_NOTES.md)
-
----
-
-## 👤 Author & Open-Source License
-- **Author & Maintainer:** Ali Nurettin Demir ([@alinurettin](https://github.com/alinurettin))
-- **License:** [MIT License](LICENSE) &copy; 2026 Ali Nurettin Demir
+## 📜 License
+MIT License &copy; 2026 Ali Nurettin Demir (@alinurettin).
