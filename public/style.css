@@ -1,0 +1,15 @@
+﻿body { background: #0b0f19; color: #f9fafb; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+.header { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; background: #111827; border-bottom: 1px solid #1f2937; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo { font-size: 24px; }
+.brand h1 { font-size: 18px; margin: 0; }
+.sub { font-size: 12px; color: #9ca3af; }
+.status-badge { background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 12px; border-radius: 20px; font-size: 12px; }
+.main { max-width: 1000px; margin: 40px auto; padding: 0 20px; flex: 1; }
+.card { background: #182234; border: 1px solid #24324a; border-radius: 12px; padding: 24px; }
+.metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+.metric { background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #1e293b; text-align: center; }
+.metric .lbl { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; }
+.metric .val { font-size: 20px; font-weight: bold; color: #38bdf8; }
+.footer { text-align: center; padding: 16px; font-size: 12px; color: #9ca3af; border-top: 1px solid #1f2937; }
+.footer a { color: #38bdf8; text-decoration: none; }

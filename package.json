@@ -1,0 +1,12 @@
+﻿{
+  "name": "chronos-scheduler",
+  "version": "1.0.0",
+  "description": "High-throughput asynchronous background worker with cron scheduling, dead-letter recovery and retry backoff.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/run_tests.js"
+  },
+  "author": "Ali Nurettin Demir",
+  "license": "MIT"
+}
