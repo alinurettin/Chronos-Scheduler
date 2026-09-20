@@ -1,4 +1,4 @@
-﻿# ğŸ“ System Architecture Document: Chronos-Scheduler
+﻿# 📐 System Architecture Document: Chronos-Scheduler
 - **Project:** Chronos-Scheduler
 - **Author:** Expert Software Architect
 - **Status:** APPROVED & COMPLETE
